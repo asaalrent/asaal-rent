@@ -56,6 +56,7 @@ export default function NotificationsPage() {
     }
 
     setNotifications(data || []);
+    window.dispatchEvent(new Event("notification-read"));
 
     // Mark notifications as read
     const { data: updateData, error: updateError } = await supabase

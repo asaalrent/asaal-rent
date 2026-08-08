@@ -1,22 +1,50 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import "leaflet/dist/leaflet.css";
 import { supabase } from "../lib/supabase";
+const Map = dynamic(() => import("../components/Map"), {
+  ssr: false,
+});
 
 export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+const [longitude, setLongitude] = useState<number | null>(null);
   const [category, setCategory] = useState("");
-  const [image, setImage] = useState<File | null>(null);
+  function getCurrentLocation() {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      setLatitude(lat);
+      setLongitude(lng);
+
+      alert("Location Selected Successfully");
+    },
+    () => {
+      alert("Location Permission Denied");
+    }
+  );
+}
+  const [images, setImages] = useState<File[]>([]);
 
   async function uploadItem() {
     try {
-      if (!image) {
-        alert("Please select an image.");
-        return;
-      }
+      if (images.length === 0) {
+  alert("Please select at least one image.");
+  return;
+}
 
       // Check login
       const {
@@ -29,23 +57,28 @@ export default function UploadPage() {
       }
 
       // Upload image
-      const fileName = `${Date.now()}-${image.name}`;
+      const imageUrls: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("items")
-        .upload(fileName, image);
+for (const image of images) {
+  const fileName = `${Date.now()}-${image.name}`;
 
-      if (uploadError) {
-        alert(uploadError.message);
-        return;
-      }
+  const { error: uploadError } = await supabase.storage
+    .from("items")
+    .upload(fileName, image);
 
-      // Get public image URL
-      const { data } = supabase.storage
-        .from("items")
-        .getPublicUrl(fileName);
+  if (uploadError) {
+    alert(uploadError.message);
+    return;
+  }
 
-      const imageUrl = data.publicUrl;
+  const { data } = supabase.storage
+    .from("items")
+    .getPublicUrl(fileName);
+
+  imageUrls.push(data.publicUrl);
+}
+
+const imageUrl = imageUrls[0];
       console.log("CATEGORY =", category);
       console.log("Selected Category:", category);
 console.log({
@@ -66,7 +99,11 @@ const { data: insertedData, error: dbError } = await supabase
       location,
       category,
       image_url: imageUrl,
+      images: imageUrls,
       user_id: user.id,
+      status: "Pending",
+      latitude,
+      longitude,
     },
   ])
   .select();
@@ -93,7 +130,7 @@ if (dbError) {
       setPrice("");
       setLocation("");
       setCategory("");
-      setImage(null);
+      setImages([]);
     } catch (err) {
       console.error(err);
       alert("Something went wrong.");
@@ -160,6 +197,37 @@ if (dbError) {
           marginBottom: "15px",
         }}
       />
+      <h3 style={{ marginTop: "20px" }}>📍 Select Location on Map</h3>
+      <button
+  onClick={getCurrentLocation}
+  style={{
+    background: "#16a34a",
+    color: "white",
+    border: "none",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    marginBottom: "15px",
+  }}
+>
+  📍 Use My Current Location
+</button>
+      <h2 style={{ color: "red" }}>MAP TEST</h2>
+
+
+<Map
+  onLocationChange={(lat, lng) => {
+    setLatitude(lat);
+    setLongitude(lng);
+  }}
+/>
+<p>
+  Latitude: {latitude}
+</p>
+
+<p>
+  Longitude: {longitude}
+</p>
 
       <select
         value={category}
@@ -182,18 +250,19 @@ if (dbError) {
       </select>
 
       <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            setImage(e.target.files[0]);
-          }
-        }}
-        style={{
-          width: "100%",
-          marginBottom: "20px",
-        }}
-      />
+  type="file"
+  accept="image/*"
+  multiple
+  onChange={(e) => {
+    if (e.target.files) {
+      setImages(Array.from(e.target.files));
+    }
+  }}
+  style={{
+    width: "100%",
+    marginBottom: "20px",
+  }}
+/>
 
       <button
         onClick={uploadItem}

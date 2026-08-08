@@ -1,11 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
+function getDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) {
+  const R = 6371;
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) *
+      Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 import DatePicker from "react-datepicker";
+import dynamic from "next/dynamic";
 import "react-datepicker/dist/react-datepicker.css";
+
+interface ItemMapProps {
+  latitude: number;
+  longitude: number;
+}
+
+const ItemMap = dynamic<ItemMapProps>(
+  () => import("@/app/components/ItemMap"),
+  {
+    ssr: false,
+  }
+);
 
 export default function ItemPage() {
   const params = useParams();
@@ -65,6 +99,41 @@ export default function ItemPage() {
 
     setItem(itemData);
 
+    const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (user) {
+  const { data: existing } = await supabase
+    .from("recently_viewed")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("item_id", itemData.id)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from("recently_viewed")
+      .update({
+        viewed_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+  } else {
+    const { data: insertData, error: insertError } = await supabase
+  .from("recently_viewed")
+  .insert({
+    user_id: user.id,
+    item_id: itemData.id,
+  })
+  .select();
+
+console.log("INSERT DATA =", insertData);
+console.log("INSERT ERROR =", insertError);
+console.log("USER ID =", user.id);
+console.log("ITEM ID =", itemData.id);
+  }
+}
+
     const { data: ownerData } = await supabase
       .from("profiles")
       .select("*")
@@ -73,9 +142,7 @@ export default function ItemPage() {
 
     setOwner(ownerData);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+   
 
     if (user) {
       const { data } = await supabase
@@ -153,23 +220,39 @@ setBookedDates(dates);
     setBookingLoading(true);
 
     try {
-      const { data: conversation, error: conversationError } = await supabase
-        .from("conversations")
-        .insert({
-          item_id: item.id,
-          owner_id: item.user_id,
-          buyer_id: user.id,
-        })
-        .select()
-        .single();
+      let conversationId;
 
-      if (conversationError) throw conversationError;
+const { data: existingConversation } = await supabase
+  .from("conversations")
+  .select("id")
+  .eq("item_id", item.id)
+  .eq("owner_id", item.user_id)
+  .eq("buyer_id", user.id)
+  .maybeSingle();
+
+if (existingConversation) {
+  conversationId = existingConversation.id;
+} else {
+  const { data: conversation, error: conversationError } = await supabase
+    .from("conversations")
+    .insert({
+      item_id: item.id,
+      owner_id: item.user_id,
+      buyer_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (conversationError) throw conversationError;
+
+  conversationId = conversation.id;
+}
 
       const { error } = await supabase.from("bookings").insert({
         item_id: item.id,
         owner_id: item.user_id,
         renter_id: user.id,
-        conversation_id: conversation?.id,
+        conversation_id: conversationId,
         start_date: startDate,
         end_date: endDate,
         total_price: totalPrice,
@@ -763,6 +846,26 @@ setBookedDates(dates);
           ))
         )}
       </div>
+      {item.latitude && item.longitude && (
+  <div
+    style={{
+      marginTop: "40px",
+    }}
+  >
+    <h2
+      style={{
+        marginBottom: "20px",
+      }}
+    >
+      📍 Item Location
+    </h2>
+
+    <ItemMap
+      latitude={item.latitude}
+      longitude={item.longitude}
+    />
+  </div>
+)}
 
       <div
         style={{

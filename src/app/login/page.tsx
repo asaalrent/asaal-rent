@@ -20,6 +20,19 @@ export default function LoginPage() {
       alert(error.message);
       return;
     }
+    const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (user) {
+  await supabase
+    .from("profiles")
+    .update({
+      is_online: true,
+      last_seen: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+}
 
     alert("Login Successful!");
     router.push("/dashboard");
@@ -45,8 +58,8 @@ export default function LoginPage() {
       email: email,
     });
 
-  console.log("PROFILE ERROR:", profileError);
-
+  console.log("USER =", data.user);
+console.log("PROFILE ERROR =", profileError);
   if (profileError) {
     alert(profileError.message);
   }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import BookingStatus from "./BookingStatus";
+import { supabase } from "@/app/lib/supabase";
 
 type Booking = {
   id: string;
@@ -22,6 +23,32 @@ export default function BookingCard({
 }: {
   booking: Booking;
 }) {
+  async function cancelBooking() {
+  const ok = confirm("Are you sure you want to cancel this booking?");
+
+  if (!ok) return;
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      status: "Cancelled",
+    })
+    .eq("id", booking.id)
+.select();
+console.log(data);
+console.log(error);
+console.log("Booking ID:", booking.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Booking Cancelled");
+
+  window.location.reload();
+}
+
   return (
     <div
       style={{
@@ -65,6 +92,25 @@ export default function BookingCard({
         <br />
         <br />
 
+{booking.status !== "Cancelled" &&
+ booking.status !== "Completed" &&
+ booking.status !== "Rejected" && (
+  <button
+    onClick={cancelBooking}
+    style={{
+      width: "100%",
+      padding: "12px",
+      background: "#ef4444",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      cursor: "pointer",
+      marginBottom: "10px",
+    }}
+  >
+    ❌ Cancel Booking
+  </button>
+)}
         <Link href={`/item/${booking.items.id}`}>
           <button
             style={{

@@ -38,6 +38,7 @@ export default function MyBookingsPage() {
         `
       )
       .eq("renter_id", user.id)
+      .neq("status", "Cancelled")
       .order("created_at", { ascending: false });
 
     if (error) {

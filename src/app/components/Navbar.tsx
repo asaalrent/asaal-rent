@@ -39,6 +39,15 @@ async function loadNotificationCount() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (user) {
+  await supabase
+    .from("profiles")
+    .update({
+      is_online: true,
+      last_seen: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+}
 
   if (!user) return;
 
@@ -54,6 +63,19 @@ console.log("Notification Count =", count);
   setNotificationCount(count || 0);
 }
   async function logout() {
+    const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (user) {
+  await supabase
+    .from("profiles")
+    .update({
+      is_online: false,
+      last_seen: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+}
     await supabase.auth.signOut();
     router.push("/login");
   }

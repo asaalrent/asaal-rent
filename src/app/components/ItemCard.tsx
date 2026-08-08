@@ -9,9 +9,16 @@ type Item = {
   location: string;
   category: string;
   image_url: string;
+  distance?: number;
 };
 
-export default function ItemCard({ item }: { item: Item }) {
+export default function ItemCard({
+  item,
+  distance,
+}: {
+  item: Item;
+  distance?: number;
+}) {
   return (
     <Link
       href={`/item/${item.id}`}
@@ -56,6 +63,16 @@ export default function ItemCard({ item }: { item: Item }) {
           </p>
 
           <p>📍 {item.location}</p>
+          {item.distance !== undefined && (
+  <p
+    style={{
+      color: "#2563eb",
+      fontWeight: "bold",
+    }}
+  >
+    📏 {item.distance.toFixed(1)} km away
+  </p>
+)}
         </div>
       </div>
     </Link>

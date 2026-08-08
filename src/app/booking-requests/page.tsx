@@ -83,6 +83,19 @@ export default function BookingRequestsPage() {
     }
 
     let conversationId = booking.conversation_id;
+    if (status === "Accepted") {
+  const { error: itemError } = await supabase
+    .from("items")
+    .update({
+      available: false,
+    })
+    .eq("id", booking.item_id);
+
+  if (itemError) {
+    alert(itemError.message);
+    return;
+  }
+}
 
     if (status === "Accepted" && !conversationId) {
       const { data: existingConversation, error: existingError } = await supabase

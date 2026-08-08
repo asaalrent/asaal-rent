@@ -60,6 +60,19 @@ async function deleteItem(id: number) {
 
   loadItems();
 }
+async function toggleAvailable(id: number, available: boolean) {
+  const { error } = await supabase
+    .from("items")
+    .update({ available: !available })
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  loadItems();
+}
 
   return (
     <div
@@ -141,6 +154,19 @@ async function deleteItem(id: number) {
   >
     ❌ Reject
   </button>
+  <button
+  onClick={() => toggleAvailable(item.id, item.available)}
+  style={{
+    background: item.available ? "#2563eb" : "#6b7280",
+    color: "white",
+    border: "none",
+    padding: "10px 18px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  }}
+>
+  {item.available ? "🙈 Hide" : "👁 Show"}
+</button>
 
   <button
     onClick={() => deleteItem(item.id)}
