@@ -79,15 +79,7 @@ for (const image of images) {
 }
 
 const imageUrl = imageUrls[0];
-      console.log("CATEGORY =", category);
-      console.log("Selected Category:", category);
-console.log({
-  title,
-  description,
-  price,
-  location,
-  category,
-});
+      
       // Save item
 const { data: insertedData, error: dbError } = await supabase
   .from("items")
@@ -98,6 +90,7 @@ const { data: insertedData, error: dbError } = await supabase
       price: Number(price),
       location,
       category,
+      keywords: `${title} ${description} ${category} ${location}`,
       image_url: imageUrl,
       images: imageUrls,
       user_id: user.id,
@@ -108,15 +101,13 @@ const { data: insertedData, error: dbError } = await supabase
   ])
   .select();
 
-console.log("Inserted Data:", insertedData);
-console.log("Insert Error:", dbError);
+
 const { data: allItems, error: selectError } = await supabase
   .from("items")
   .select("*")
   .order("created_at", { ascending: false });
 
-console.log("ALL ITEMS:", allItems);
-console.log("SELECT ERROR:", selectError);
+
 
 if (dbError) {
   alert(dbError.message);

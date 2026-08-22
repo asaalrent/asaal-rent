@@ -127,18 +127,15 @@ if (user) {
   })
   .select();
 
-console.log("INSERT DATA =", insertData);
-console.log("INSERT ERROR =", insertError);
-console.log("USER ID =", user.id);
-console.log("ITEM ID =", itemData.id);
+
   }
 }
 
     const { data: ownerData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", itemData.user_id)
-      .single();
+  .from("public_profiles")
+  .select("*")
+  .eq("id", itemData.user_id)
+  .single();
 
     setOwner(ownerData);
 
@@ -186,7 +183,7 @@ booked?.forEach((booking) => {
   }
 });
 
-console.log("Booked Dates =", dates);
+
 
 setBookedDates(dates);
     setLoading(false);
@@ -338,9 +335,7 @@ if (existingConversation) {
         return;
       }
 
-      console.log("USER ID =", user.id);
-      console.log("ITEM ID =", item.id);
-      console.log("DATA =", data);
+      
       setWishlisted(true);
     } else {
       const { error } = await supabase

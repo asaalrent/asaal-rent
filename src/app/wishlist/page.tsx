@@ -36,16 +36,7 @@ export default function WishlistPage() {
         )
       `)
       .eq("user_id", user.id);
-      console.log("DATA =", data);
-console.log("ERROR =", error);
-
-    console.log(data);
-
-    if (error) {
-  console.log("ERROR =", error);
-  setLoading(false);
-  return;
-}
+      
 
     setItems(data || []);
     setLoading(false);

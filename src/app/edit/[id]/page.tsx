@@ -38,7 +38,7 @@ export default function EditItemPage() {
   }
 
  async function updateItem() {
-  console.log("ID:", id);
+  
 
   const { data, error } = await supabase
     .from("items")
@@ -52,8 +52,7 @@ export default function EditItemPage() {
     .eq("id", id)
     .select();
 
-  console.log("Updated Data:", data);
-  console.log("Error:", error);
+  
 
   if (error) {
     alert(error.message);

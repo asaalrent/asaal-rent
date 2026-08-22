@@ -61,7 +61,7 @@ useEffect(() => {
   });
     },
     (error) => {
-      console.log(error);
+      
     }
   );
 }, []);
@@ -104,7 +104,7 @@ async function fetchItems() {
  
   
 
-  console.log("ERROR:", error);
+  
   console.table(data);
 
   if (error) {
@@ -317,11 +317,7 @@ setRecentItems(uniqueItems);
 >
  {items
   .filter((item) => {
-    console.log(
-  item.title,
-  item.category,
-  selectedCategory
-);
+    
     const q = search.toLowerCase();
     const words = q
   .split(" ")
@@ -341,7 +337,7 @@ setRecentItems(uniqueItems);
         "to",
       ].includes(word)
   );
-  console.log("Words:", words);
+  
     const priceWord = words.find((w) => !isNaN(Number(w)));
 
 const maxPrice = priceWord ? Number(priceWord) : null;

@@ -22,10 +22,10 @@ export default function UserProfilePage() {
 
     // Profile
     const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+  .from("public_profiles")
+  .select("*")
+  .eq("id", userId)
+  .single();
 
     setProfile(profileData);
 

@@ -40,6 +40,7 @@ export default function Map({
 }) {
   return (
     <MapContainer
+  key="upload-map"
       center={[22.3039, 70.8022]}
       zoom={13}
       style={{ height: "400px", width: "100%", borderRadius: "10px" }}

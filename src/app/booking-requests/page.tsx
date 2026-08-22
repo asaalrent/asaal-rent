@@ -146,21 +146,28 @@ export default function BookingRequestsPage() {
       }
     }
 
-    const { error: notificationError } = await supabase.from("notifications").insert([
-      {
-        user_id: booking.renter_id,
-        title: `Booking ${status}`,
-        message:
-          status === "Accepted"
-            ? "🎉 Your booking request has been accepted."
-            : "❌ Your booking request has been rejected.",
-      },
-    ]);
+   const notificationTitle =
+  status === "Accepted"
+    ? "🎉 Booking Accepted"
+    : "❌ Booking Rejected";
 
-    if (notificationError) {
-      alert(notificationError.message);
-      return;
-    }
+const notificationMessage =
+  status === "Accepted"
+    ? "Your booking request has been accepted."
+    : "Your booking request has been rejected.";
+
+const { error: notificationError } =
+  await supabase.rpc("create_notification", {
+    p_user_id: booking.renter_id,
+    p_title: notificationTitle,
+    p_message: notificationMessage,
+  });
+
+if (notificationError) {
+  console.error("NOTIFICATION ERROR =", notificationError);
+  alert("Notification failed. Check console.");
+  return;
+}
 
     await loadRequests();
   }

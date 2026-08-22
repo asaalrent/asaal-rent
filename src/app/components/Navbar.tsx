@@ -59,7 +59,7 @@ async function loadNotificationCount() {
     })
     .eq("user_id", user.id)
     .eq("is_read", false);
-console.log("Notification Count =", count);
+
   setNotificationCount(count || 0);
 }
   async function logout() {

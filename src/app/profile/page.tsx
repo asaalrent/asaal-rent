@@ -32,12 +32,12 @@ export default function ProfilePage() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [image]);
   async function loadProfile() {
-    console.log("STEP 1 - loadProfile started");
+    
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    console.log("STEP 2 - User:", user);
+    
 
     if (!user) {
       window.location.href = "/login";
@@ -52,8 +52,7 @@ export default function ProfilePage() {
       .select("*")
       .eq("id", user.id)
       .single();
-      console.log("STEP 3 - Profile Data:", data);
-console.log("STEP 4 - Profile Error:", error);
+      
 
     if (error) {
       console.error(error);

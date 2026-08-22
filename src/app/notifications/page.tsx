@@ -39,7 +39,7 @@ export default function NotificationsPage() {
       setLoading(false);
       return;
     }
-    console.log("LOGGED IN USER =", user.id);
+    
 
     // Load notifications
     const { data, error } = await supabase
@@ -47,7 +47,7 @@ export default function NotificationsPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-      console.log("NOTIFICATIONS =", data);
+     
 
     if (error) {
       console.error("LOAD ERROR =", error);
@@ -66,8 +66,7 @@ export default function NotificationsPage() {
       .eq("is_read", false)
       .select();
 
-    console.log("UPDATE DATA =", updateData);
-    console.log("UPDATE ERROR =", updateError);
+    
 
     setLoading(false);
   }

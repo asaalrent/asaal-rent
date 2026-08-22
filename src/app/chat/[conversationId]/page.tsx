@@ -14,7 +14,7 @@ export default function ChatRoom({
 }) {
   const { conversationId } = use(params);
   const router = useRouter();
-  console.log("conversationId =", conversationId);
+  
   const [message, setMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,25 +86,77 @@ useEffect(() => {
       chatChannelRef.current = null;
     }
 
-    const channel = supabase
-      .channel(`chat-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "profiles",
-        },
-        (payload) => {
-          if (payload.new.id === otherUserRef.current?.id) {
-            setOtherUser(payload.new);
-          }
-        }
-      );
+   const channel = supabase
+  .channel(`chat-${conversationId}`)
 
-    await channel.subscribe();
+  // 👤 Other user online / typing
+  .on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "profiles",
+    },
+    (payload) => {
+      if (payload.new.id === otherUserRef.current?.id) {
+        setOtherUser(payload.new);
+      }
+    }
+  )
 
-    chatChannelRef.current = channel;
+  // 💬 New message
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    async (payload) => {
+      
+
+      await loadMessages();
+    }
+  )
+
+  // ✏️ Edited message
+  .on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "messages",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    async (payload) => {
+      
+
+      await loadMessages();
+    }
+  )
+
+  // 🗑️ Deleted message
+  .on(
+    "postgres_changes",
+    {
+      event: "DELETE",
+      schema: "public",
+      table: "messages",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    async (payload) => {
+      
+
+      await loadMessages();
+    }
+  );
+
+await channel.subscribe((status) => {
+  
+});
+
+chatChannelRef.current = channel;
   }
 
   init();
@@ -126,67 +178,55 @@ useEffect(() => {
 }, [messages]);
 
 useEffect(() => {
-  if (!conversationId) return;
-
-  console.log("CHANNEL CREATED =", `messages-${conversationId}`);
-  const channel = supabase.channel(`messages-${conversationId}`);
-  
-  console.log("CURRENT USER =", currentUser);
-
-console.log("FILTER =", `receiver_id=eq.${currentUser}`);
-
-  channel.on(
-    "postgres_changes",
-    {
-      event: "*",
-      schema: "public",
-      table: "messages",
-    },
-    () => {
-      loadMessages();
-    }
-  );
-  channel.on(
-    "postgres_changes",
-    {
-      event: "*",
-      schema: "public",
-      table: "message_reactions",
-    },
-    () => {
-      loadMessages();
-    }
-  );
- 
-  channel.on(
-  "postgres_changes",
-  {
-    event: "*",
-    schema: "public",
-    table: "calls",
-  },
-  (payload) => {
-    console.log("🔥 RAW CALL EVENT =", payload);
-
-    const call = payload.new as any;
-
-    if (call.receiver_id !== currentUser) return;
-
-    alert("CALL RECEIVED");
-
-    router.push(`/incoming-call/${call.id}`);
+  if (!conversationId || !currentUser) {
+    
+    return;
   }
-);
+
   
 
-channel.subscribe((status) => {
-  console.log("CHANNEL STATUS =", status);
-});
+  const callChannel = supabase
+    .channel(`incoming-call-${currentUser}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "calls",
+        filter: `receiver_id=eq.${currentUser}`,
+      },
+      (payload) => {
+        
+
+        const call = payload.new as any;
+
+        
+
+        if (call.receiver_id !== currentUser) {
+          
+          return;
+        }
+
+        if (call.status !== "calling") {
+          
+          return;
+        }
+
+        
+
+        router.push(`/incoming-call/${call.id}`);
+      }
+    )
+    .subscribe((status) => {
+      
+    });
 
   return () => {
-    supabase.removeChannel(channel);
+    
+
+    supabase.removeChannel(callChannel);
   };
-}, [conversationId, currentUser]);
+}, [conversationId, currentUser, router]);
 
 
 async function loadMessages() {
@@ -210,20 +250,25 @@ async function loadMessages() {
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("ERROR:", error);
-alert(JSON.stringify(error));
-    return;
-  }
+  
+  console.error("MESSAGE ERROR MESSAGE =", error.message);
+  console.error("MESSAGE ERROR CODE =", error.code);
+  console.error("MESSAGE ERROR DETAILS =", error.details);
+  console.error("MESSAGE ERROR HINT =", error.hint);
+
+  alert(
+    `Message Load Error\n\n${error.message}\n\nCode: ${error.code}`
+  );
+
+  return;
+}
   const {
   data: { user },
 } = await supabase.auth.getUser();
 
-console.log("USER =", user);
-console.log("USER ID =", user?.id);
 
-console.log("MESSAGES =", data);
   setMessages(data || []);
-  console.log("ALL MESSAGES =", data);
+  
   const { data: conversation } = await supabase
   .from("conversations")
   .select("*")
@@ -237,16 +282,12 @@ if (conversation && user) {
       : conversation.owner_id;
 
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", otherUserId)
-    .single();
+  .from("public_profiles")
+  .select("*")
+  .eq("id", otherUserId)
+  .single();
 
-    console.log("CONVERSATION =", conversation);
-console.log("OTHER USER ID =", otherUserId);
-console.log("PROFILE =", profile);
-
-console.log("PROFILE DATA =", profile);
+    
 
   otherUserRef.current = profile;
 setOtherUser(profile);
@@ -262,8 +303,7 @@ if (user) {
     .eq("is_read", false)
     .select();
 
-  console.log("UPDATED ROWS =", updatedRows);
-  console.log("READ UPDATE ERROR =", updateError);
+  
 }
 }
 async function startRecording() {
@@ -342,7 +382,7 @@ async function sendLocation() {
 }
 
 async function startVoiceCall() {
-  console.log("STEP-1");
+  
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -365,47 +405,31 @@ async function startVoiceCall() {
       ? conversation.buyer_id
       : conversation.owner_id;
 
-  const { error } = await supabase
-    .from("calls")
-    .insert({
-      conversation_id: conversationId,
-      caller_id: user.id,
-      receiver_id: receiverId,
-      call_type: "voice",
-      status: "calling",
-    });
-    const { data: testCall } = await supabase
+  const { data: newCall, error } = await supabase
   .from("calls")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(1);
+  .insert({
+    conversation_id: conversationId,
+    caller_id: user.id,
+    receiver_id: receiverId,
+    call_type: "voice",
+    status: "calling",
+  })
+  .select()
+  .single();
 
-console.log("LAST CALL =", testCall);
 
-  console.log("CALL ERROR =", error);
 
-  const { data } = await supabase
-  .from("calls")
-  .select("*")
-  .eq("conversation_id", conversationId)
-  .order("created_at", { ascending: false })
-  .limit(1);
+  
 
-console.log("INSERTED CALL =", data);
 
-  const { data: lastCall } = await supabase
-  .from("calls")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(1);
 
-console.log("LAST CALL =", lastCall);
+  
 
   if (error) {
     alert(error.message);
     return;
   }
-  console.log("STEP-2");
+  
 router.push(`/call/${conversationId}`);
 
   
@@ -414,10 +438,7 @@ router.push(`/call/${conversationId}`);
 
 async function sendMessage() {
 
-    console.log("MESSAGE =", message);
-  console.log("IMAGE =", image);
-  console.log("FILE =", file);
-  console.log("AUDIO =", audio);
+    
    
  if (!message.trim() && !image && !audio && !file) return;
 
@@ -430,11 +451,11 @@ let fileName = null;
 let fileType = null;
 
 if (image) {
-  console.log("Uploading File =", image);
+  
 
 const fileName = `${Date.now()}-${image.name}`;
 
-console.log("File Name =", fileName);
+
 
   const { error: uploadError } = await supabase.storage
     .from("chat-images")
@@ -449,7 +470,7 @@ console.log("File Name =", fileName);
   imageUrl = supabase.storage
     .from("chat-images")
     .getPublicUrl(fileName).data.publicUrl;
-    console.log("IMAGE URL =", imageUrl);
+    
 }
 
 if (file) {
@@ -474,7 +495,7 @@ if (file) {
 }
 
 if (audio) {
-  console.log("Uploading audio...", audio);
+  
   const audioName = `${Date.now()}.webm`;
 
   const { error: audioError } = await supabase.storage
@@ -507,8 +528,7 @@ if (audio) {
   .select("*")
   .eq("id", conversationId)
   .single();
-  console.log("CONVERSATION =", conversation);
-console.log("conversationId =", conversationId);
+  
 
 if (!conversation) {
   alert("Conversation not found");
@@ -520,8 +540,7 @@ const receiverId =
   conversation.owner_id === user.id
     ? conversation.buyer_id
     : conversation.owner_id;
-    console.log("SENDER =", user.id);
-console.log("RECEIVER =", receiverId);
+    
 
   const { error } = await supabase
     .from("messages")
@@ -541,24 +560,18 @@ console.log("RECEIVER =", receiverId);
   reply_to: replyMessage?.id ?? null,
 });
 
-    console.log("INSERT ERROR =", error);
-    console.log("IMAGE URL =", imageUrl);
+    
 
-const { data: testData, error: testError } = await supabase
-  .from("messages")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(1);
 
-console.log("LAST MESSAGE =", testData);
-console.log("INSERT ERROR =", error);
-console.log("SELECT ERROR =", testError);
-    await supabase.from("notifications").insert({
-  user_id: receiverId,
-  title: "💬 New Message",
-  message: "You received a new message.",
-  is_read: false,
-});
+    const { error: notificationError } =
+  await supabase.rpc("create_notification", {
+    p_user_id: receiverId,
+    p_title: "💬 New Message",
+    p_message: "You received a new message.",
+  });
+
+
+
 const { error: conversationError } = await supabase
   .from("conversations")
   .update({
@@ -567,14 +580,8 @@ const { error: conversationError } = await supabase
   })
   .eq("id", conversationId);
 
-console.log("CONVERSATION UPDATE ERROR =", conversationError);
-const { data: updatedConversation } = await supabase
-  .from("conversations")
-  .select("*")
-  .eq("id", conversationId)
-  .single();
 
-console.log("UPDATED CONVERSATION =", updatedConversation);
+
 
   setSending(false);
 
@@ -607,8 +614,7 @@ if (current) {
 await loadMessages();
 
 }
-console.log("MESSAGES =", messages);
-console.log("MESSAGES LENGTH =", messages.length);
+
 
   return (
     <>
@@ -728,8 +734,7 @@ console.log("MESSAGES LENGTH =", messages.length);
   ) : (
 <>
  {messages.map((msg, index) => {
-  console.log("MESSAGE =", msg);
-  console.log("REACTIONS =", msg.reactions);
+  
 
   const currentDate = new Date(msg.created_at).toDateString();
 
@@ -1175,7 +1180,7 @@ if (currentDate === today) {
    onChange={(e) => {
   const file = e.target.files?.[0];
 
-  console.log("SELECTED FILE =", file);
+  
 
   if (file) {
     setImage(file);
@@ -1271,16 +1276,14 @@ if (currentDate === today) {
 
   if (!user) return;
 
-  const { data, error } = await supabase
+  await supabase
   .from("profiles")
   .update({
     is_typing: true,
   })
-  .eq("id", user.id)
-  .select();
+  .eq("id", user.id);
 
-console.log("DATA =", data);
-console.log("ERROR =", error);
+
 
   if (typingTimeout.current) {
     clearTimeout(typingTimeout.current);

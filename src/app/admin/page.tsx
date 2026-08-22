@@ -17,7 +17,7 @@ export default function UsersPage() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.log(error);
+      
       return;
     }
 

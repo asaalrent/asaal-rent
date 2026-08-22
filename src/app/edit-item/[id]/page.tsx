@@ -45,6 +45,26 @@ const [imageUrl, setImageUrl] = useState("");
   }
 
   async function updateItem() {
+    let finalImage = imageUrl;
+
+if (image) {
+  const fileName = `${Date.now()}-${image.name}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("items")
+    .upload(fileName, image);
+
+  if (uploadError) {
+    alert(uploadError.message);
+    return;
+  }
+
+  const { data } = supabase.storage
+    .from("items")
+    .getPublicUrl(fileName);
+
+  finalImage = data.publicUrl;
+}
     const { error } = await supabase
       .from("items")
       .update({
@@ -52,6 +72,7 @@ const [imageUrl, setImageUrl] = useState("");
         description,
         price: Number(price),
         location,
+        image_url: finalImage,
       })
       .eq("id", id);
 
@@ -106,6 +127,36 @@ const [imageUrl, setImageUrl] = useState("");
         placeholder="Location"
         style={input}
       />
+      <img
+  src={
+    image
+      ? URL.createObjectURL(image)
+      : imageUrl || "https://placehold.co/500x300?text=Item"
+  }
+  alt="Preview"
+  style={{
+    width: "100%",
+    height: "300px",
+    objectFit: "cover",
+    borderRadius: "12px",
+    marginTop: "20px",
+    marginBottom: "15px",
+  }}
+/>
+
+<input
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    if (e.target.files?.[0]) {
+      setImage(e.target.files[0]);
+    }
+  }}
+  style={{
+    width: "100%",
+    marginBottom: "20px",
+  }}
+/>
 
       <button
         onClick={updateItem}

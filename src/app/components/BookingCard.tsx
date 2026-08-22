@@ -35,9 +35,7 @@ export default function BookingCard({
     })
     .eq("id", booking.id)
 .select();
-console.log(data);
-console.log(error);
-console.log("Booking ID:", booking.id);
+
 
   if (error) {
     alert(error.message);
