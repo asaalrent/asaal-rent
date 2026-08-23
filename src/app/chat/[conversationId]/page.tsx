@@ -150,6 +150,20 @@ useEffect(() => {
 
       await loadMessages();
     }
+  )
+
+    // 📞 Call history realtime
+  .on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "calls",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    async () => {
+      await loadMessages();
+    }
   );
 
 await channel.subscribe((status) => {
@@ -199,6 +213,25 @@ async function loadMessages() {
 `)
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
+    const { data: calls, error: callsError } = await supabase
+  .from("calls")
+  .select(`
+    id,
+    conversation_id,
+    caller_id,
+    receiver_id,
+    call_type,
+    status,
+    created_at,
+    ended_at,
+    answer
+  `)
+  .eq("conversation_id", conversationId)
+  .order("created_at", { ascending: true });
+
+if (callsError) {
+  console.error("CALL HISTORY LOAD ERROR =", callsError);
+}
 
   if (error) {
   
@@ -215,7 +248,56 @@ async function loadMessages() {
 } = await supabase.auth.getUser();
 
 
-  setMessages(data || []);
+  const messageRows = (data || []).map((msg) => ({
+  ...msg,
+  is_call: false,
+}));
+
+const callRows = (calls || []).map((call) => ({
+  id: `call-${call.id}`,
+  is_call: true,
+
+  call_id: call.id,
+  conversation_id: call.conversation_id,
+
+  caller_id: call.caller_id,
+  receiver_id: call.receiver_id,
+
+  call_type: call.call_type,
+  status: call.status,
+
+  created_at: call.ended_at || call.created_at,
+  started_at: call.created_at,
+  ended_at: call.ended_at,
+
+  answer: call.answer,
+
+  // Normal message fields
+  message: null,
+  image_url: null,
+  audio_url: null,
+  file_url: null,
+  file_name: null,
+  file_type: null,
+  latitude: null,
+  longitude: null,
+  reply_to: null,
+  reply: null,
+  reactions: [],
+  is_read: true,
+  is_edited: false,
+}));
+
+const combinedRows = [
+  ...messageRows,
+  ...callRows,
+].sort(
+  (a, b) =>
+    new Date(a.created_at).getTime() -
+    new Date(b.created_at).getTime()
+);
+
+setMessages(combinedRows);
   
   const { data: conversation } = await supabase
   .from("conversations")
@@ -682,6 +764,114 @@ await loadMessages();
   ) : (
 <>
  {messages.map((msg, index) => {
+
+  if (msg.is_call) {
+  const isCaller = msg.caller_id === currentUser;
+  const answered = Boolean(msg.answer);
+
+  let title = "";
+  let icon = "📞";
+
+  if (msg.status === "missed") {
+    title = "Missed call";
+    icon = "📵";
+  } else if (msg.status === "declined") {
+    title = isCaller ? "Call declined" : "Declined call";
+    icon = "🚫";
+  } else if (msg.status === "ended") {
+    if (answered) {
+      title = isCaller ? "Outgoing call" : "Incoming call";
+    } else {
+      title = isCaller ? "Canceled call" : "Missed call";
+    }
+  } else if (msg.status === "answered") {
+    title = isCaller ? "Outgoing call" : "Incoming call";
+  } else {
+    title = isCaller ? "Outgoing call" : "Incoming call";
+  }
+
+  let durationText = "";
+
+  if (answered && msg.started_at && msg.ended_at) {
+    const durationSeconds = Math.max(
+      0,
+      Math.floor(
+        (new Date(msg.ended_at).getTime() -
+          new Date(msg.started_at).getTime()) /
+          1000
+      )
+    );
+
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+
+    durationText = `${String(minutes).padStart(
+      2,
+      "0"
+    )}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return (
+    <div key={msg.id}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: isCaller ? "flex-end" : "flex-start",
+          marginBottom: "12px",
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 16px",
+            borderRadius: "16px",
+            background:
+              msg.status === "missed" ||
+              msg.status === "declined"
+                ? "#fef2f2"
+                : "#ecfdf5",
+            border: "1px solid #d1d5db",
+            minWidth: "170px",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: "bold",
+              fontSize: "14px",
+            }}
+          >
+            {icon} {title}
+          </div>
+
+          {durationText && (
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "13px",
+                color: "#666",
+              }}
+            >
+              Duration {durationText}
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: "5px",
+              fontSize: "11px",
+              color: "#777",
+              textAlign: "right",
+            }}
+          >
+            {new Date(msg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
   
 
   const currentDate = new Date(msg.created_at).toDateString();

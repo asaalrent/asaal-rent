@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supabase";
 
 export default function IncomingCallListener() {
   const router = useRouter();
-  const pathname = usePathname();
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
+
+  const channelRef =
+    useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -20,15 +20,15 @@ export default function IncomingCallListener() {
 
       if (!user || !mounted) return;
 
-      currentUserIdRef.current = user.id;
-
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
 
       const channel = supabase
-        .channel(`global-incoming-calls-${user.id}`)
+        .channel(
+          `global-incoming-calls-${user.id}-${crypto.randomUUID()}`
+        )
         .on(
           "postgres_changes",
           {
@@ -44,8 +44,6 @@ export default function IncomingCallListener() {
               status: string;
             };
 
-            if (!call) return;
-
             if (
               call.receiver_id !== user.id ||
               call.status !== "calling"
@@ -53,21 +51,23 @@ export default function IncomingCallListener() {
               return;
             }
 
-            // Already on incoming-call page for this call
-            if (pathname === `/incoming-call/${call.id}`) {
+            const handledKey =
+              `handled-incoming-call-${call.id}`;
+
+            if (
+              sessionStorage.getItem(handledKey)
+            ) {
               return;
             }
 
-            // Don't reopen the same call repeatedly
-            const handledKey = `handled-incoming-call-${call.id}`;
+            sessionStorage.setItem(
+              handledKey,
+              "1"
+            );
 
-            if (sessionStorage.getItem(handledKey)) {
-              return;
-            }
-
-            sessionStorage.setItem(handledKey, "1");
-
-            router.push(`/incoming-call/${call.id}`);
+            router.push(
+              `/incoming-call/${call.id}`
+            );
           }
         )
         .subscribe();
@@ -80,14 +80,15 @@ export default function IncomingCallListener() {
     return () => {
       mounted = false;
 
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      const channel = channelRef.current;
 
-      currentUserIdRef.current = null;
+      if (channel) {
+        channelRef.current = null;
+
+        supabase.removeChannel(channel);
+      }
     };
-  }, [router, pathname]);
+  }, [router]);
 
   return null;
 }
