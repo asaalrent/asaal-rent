@@ -35,6 +35,69 @@ window.addEventListener("notification-read", refresh);
 };
 }, []);
 
+useEffect(() => {
+  let mounted = true;
+  let callChannel: ReturnType<typeof supabase.channel> | null = null;
+
+  async function setupIncomingCalls() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || !mounted) return;
+    console.log("GLOBAL CALL LISTENER USER =", user.id);
+
+    callChannel = supabase
+      .channel(`global-incoming-calls-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "calls",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("GLOBAL INCOMING CALL EVENT =", payload);
+          const call = payload.new as any;
+
+          if (!call) return;
+
+          if (
+            call.receiver_id !== user.id ||
+            call.status !== "calling"
+          ) {
+            return;
+          }
+
+          const handledKey = `incoming-call-${call.id}`;
+
+          if (sessionStorage.getItem(handledKey)) {
+            return;
+          }
+
+          sessionStorage.setItem(handledKey, "true");
+
+          router.push(`/incoming-call/${call.id}`);
+        }
+      )
+      .subscribe((status) => {
+  console.log("GLOBAL CALL CHANNEL STATUS =", status);
+});
+  }
+
+  setupIncomingCalls();
+
+  return () => {
+    mounted = false;
+
+    if (callChannel) {
+      supabase.removeChannel(callChannel);
+      callChannel = null;
+    }
+  };
+}, [router]);
+
 async function loadNotificationCount() {
   const {
     data: { user },

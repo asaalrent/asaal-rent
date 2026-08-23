@@ -177,56 +177,7 @@ useEffect(() => {
   });
 }, [messages]);
 
-useEffect(() => {
-  if (!conversationId || !currentUser) {
-    
-    return;
-  }
 
-  
-
-  const callChannel = supabase
-    .channel(`incoming-call-${currentUser}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "calls",
-        filter: `receiver_id=eq.${currentUser}`,
-      },
-      (payload) => {
-        
-
-        const call = payload.new as any;
-
-        
-
-        if (call.receiver_id !== currentUser) {
-          
-          return;
-        }
-
-        if (call.status !== "calling") {
-          
-          return;
-        }
-
-        
-
-        router.push(`/incoming-call/${call.id}`);
-      }
-    )
-    .subscribe((status) => {
-      
-    });
-
-  return () => {
-    
-
-    supabase.removeChannel(callChannel);
-  };
-}, [conversationId, currentUser, router]);
 
 
 async function loadMessages() {
@@ -251,10 +202,7 @@ async function loadMessages() {
 
   if (error) {
   
-  console.error("MESSAGE ERROR MESSAGE =", error.message);
-  console.error("MESSAGE ERROR CODE =", error.code);
-  console.error("MESSAGE ERROR DETAILS =", error.details);
-  console.error("MESSAGE ERROR HINT =", error.hint);
+  
 
   alert(
     `Message Load Error\n\n${error.message}\n\nCode: ${error.code}`
