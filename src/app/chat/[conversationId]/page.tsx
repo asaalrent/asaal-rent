@@ -266,7 +266,7 @@ const callRows = (calls || []).map((call) => ({
   call_type: call.call_type,
   status: call.status,
 
-  created_at: call.ended_at || call.created_at,
+  created_at: call.created_at,
   started_at: call.created_at,
   ended_at: call.ended_at,
 
@@ -771,44 +771,62 @@ await loadMessages();
 
   let title = "";
   let icon = "📞";
+  let color = "#374151";
 
   if (msg.status === "missed") {
     title = "Missed call";
-    icon = "📵";
+    icon = "❌";
+    color = "#dc2626";
   } else if (msg.status === "declined") {
-    title = isCaller ? "Call declined" : "Declined call";
+    title = "Declined call";
     icon = "🚫";
+    color = "#dc2626";
   } else if (msg.status === "ended") {
     if (answered) {
-      title = isCaller ? "Outgoing call" : "Incoming call";
+      title = isCaller
+        ? "Outgoing call"
+        : "Incoming call";
     } else {
-      title = isCaller ? "Canceled call" : "Missed call";
+      title = isCaller
+        ? "Canceled call"
+        : "Missed call";
+
+      icon = isCaller ? "📵" : "❌";
+      color = "#dc2626";
     }
-  } else if (msg.status === "answered") {
-    title = isCaller ? "Outgoing call" : "Incoming call";
   } else {
-    title = isCaller ? "Outgoing call" : "Incoming call";
+    title = isCaller
+      ? "Outgoing call"
+      : "Incoming call";
   }
 
   let durationText = "";
 
-  if (answered && msg.started_at && msg.ended_at) {
+  if (
+    answered &&
+    msg.started_at &&
+    msg.ended_at
+  ) {
     const durationSeconds = Math.max(
       0,
       Math.floor(
-        (new Date(msg.ended_at).getTime() -
-          new Date(msg.started_at).getTime()) /
-          1000
+        (
+          new Date(msg.ended_at).getTime() -
+          new Date(msg.started_at).getTime()
+        ) / 1000
       )
     );
 
-    const minutes = Math.floor(durationSeconds / 60);
+    const minutes = Math.floor(
+      durationSeconds / 60
+    );
+
     const seconds = durationSeconds % 60;
 
-    durationText = `${String(minutes).padStart(
-      2,
-      "0"
-    )}:${String(seconds).padStart(2, "0")}`;
+    durationText =
+      `${String(minutes).padStart(2, "0")}:${String(
+        seconds
+      ).padStart(2, "0")}`;
   }
 
   return (
@@ -816,57 +834,78 @@ await loadMessages();
       <div
         style={{
           display: "flex",
-          justifyContent: isCaller ? "flex-end" : "flex-start",
-          marginBottom: "12px",
+          justifyContent: isCaller
+            ? "flex-end"
+            : "flex-start",
+          marginBottom: "8px",
         }}
       >
         <div
           style={{
-            padding: "10px 16px",
-            borderRadius: "16px",
-            background:
-              msg.status === "missed" ||
-              msg.status === "declined"
-                ? "#fef2f2"
-                : "#ecfdf5",
-            border: "1px solid #d1d5db",
-            minWidth: "170px",
+            display: "flex",
+            alignItems: "center",
+            gap: "9px",
+            padding: "7px 10px",
+            borderRadius: "12px",
+            maxWidth: "70%",
+            background: "transparent",
           }}
         >
-          <div
+          <span
             style={{
-              fontWeight: "bold",
-              fontSize: "14px",
+              fontSize: "18px",
+              color,
             }}
           >
-            {icon} {title}
-          </div>
+            {icon}
+          </span>
 
-          {durationText && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+            }}
+          >
             <div
               style={{
-                marginTop: "4px",
-                fontSize: "13px",
-                color: "#666",
+                fontSize: "14px",
+                fontWeight: "600",
+                color,
               }}
             >
-              Duration {durationText}
+              {title}
             </div>
-          )}
 
-          <div
+            {durationText && (
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  marginTop: "2px",
+                }}
+              >
+                Call duration · {durationText}
+              </div>
+            )}
+          </div>
+
+          <span
             style={{
-              marginTop: "5px",
               fontSize: "11px",
-              color: "#777",
-              textAlign: "right",
+              color: "#9ca3af",
+              marginLeft: "4px",
+              whiteSpace: "nowrap",
+              alignSelf: "flex-end",
             }}
           >
-            {new Date(msg.created_at).toLocaleTimeString([], {
+            {new Date(
+              msg.created_at
+            ).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })}
-          </div>
+          </span>
         </div>
       </div>
     </div>
