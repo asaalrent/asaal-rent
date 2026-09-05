@@ -765,6 +765,37 @@ await loadMessages();
 <>
  {messages.map((msg, index) => {
 
+  const messageDate = new Date(msg.created_at);
+
+const currentDate = messageDate.toDateString();
+
+const previousDate =
+  index > 0
+    ? new Date(messages[index - 1].created_at).toDateString()
+    : null;
+
+const showDate =
+  index === 0 || currentDate !== previousDate;
+
+const today = new Date();
+const yesterday = new Date();
+
+yesterday.setDate(yesterday.getDate() - 1);
+
+let dateLabel = messageDate.toLocaleDateString([], {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+if (messageDate.toDateString() === today.toDateString()) {
+  dateLabel = "Today";
+} else if (
+  messageDate.toDateString() === yesterday.toDateString()
+) {
+  dateLabel = "Yesterday";
+}
+
   if (msg.is_call) {
   const isCaller = msg.caller_id === currentUser;
   const answered = Boolean(msg.answer);
@@ -913,38 +944,42 @@ await loadMessages();
 }
   
 
-  const currentDate = new Date(msg.created_at).toDateString();
 
-const previousDate =
-  index > 0
-    ? new Date(messages[index - 1].created_at).toDateString()
-    : "";
-
-const showDate = currentDate !== previousDate;
-
-const today = new Date().toDateString();
-
-const yesterday = new Date(
-  Date.now() - 24 * 60 * 60 * 1000
-).toDateString();
-
-let dateLabel = currentDate;
-
-if (currentDate === today) {
-  dateLabel = "Today";
-} else if (currentDate === yesterday) {
-  dateLabel = "Yesterday";
-}
 
  return (
   <div key={msg.id}>
     {showDate && (
       <div
         style={{
-          textAlign: "center",
-          margin: "20px 0",
+          display: "flex",
+          justifyContent: "center",
+          margin: "16px 0",
         }}
       >
+        <span
+          style={{
+            background: "#e5e7eb",
+            color: "#555",
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "12px",
+            fontWeight: "600",
+          }}
+        >
+          {dateLabel}
+        </span>
+      </div>
+    )}
+    
+    {showDate && (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      margin: "16px 0",
+    }}
+  >
+    
         <span
           style={{
             background: "#e5e7eb",
