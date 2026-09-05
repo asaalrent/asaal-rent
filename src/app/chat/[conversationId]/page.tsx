@@ -765,36 +765,40 @@ await loadMessages();
 <>
  {messages.map((msg, index) => {
 
-  const messageDate = new Date(msg.created_at);
+   const messageDate = new Date(msg.created_at);
 
-const currentDate = messageDate.toDateString();
+  const currentDate = messageDate.toDateString();
 
-const previousDate =
-  index > 0
-    ? new Date(messages[index - 1].created_at).toDateString()
-    : null;
+  const previousDate =
+    index > 0
+      ? new Date(messages[index - 1].created_at).toDateString()
+      : null;
 
-const showDate =
-  index === 0 || currentDate !== previousDate;
+  const showDate =
+    index === 0 || currentDate !== previousDate;
 
-const today = new Date();
-const yesterday = new Date();
+  const today = new Date();
+  const yesterday = new Date();
 
-yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setDate(yesterday.getDate() - 1);
 
-let dateLabel = messageDate.toLocaleDateString([], {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+  let dateLabel = messageDate.toLocaleDateString([], {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-if (messageDate.toDateString() === today.toDateString()) {
-  dateLabel = "Today";
-} else if (
-  messageDate.toDateString() === yesterday.toDateString()
-) {
-  dateLabel = "Yesterday";
-}
+  if (
+    messageDate.toDateString() ===
+    today.toDateString()
+  ) {
+    dateLabel = "Today";
+  } else if (
+    messageDate.toDateString() ===
+    yesterday.toDateString()
+  ) {
+    dateLabel = "Yesterday";
+  }
 
   if (msg.is_call) {
   const isCaller = msg.caller_id === currentUser;
@@ -970,7 +974,7 @@ if (messageDate.toDateString() === today.toDateString()) {
         </span>
       </div>
     )}
-    
+
     {showDate && (
   <div
     style={{
